@@ -1,0 +1,27 @@
+location /service {
+    access_log /var/log/nginx/api_bookstore.log main;
+    # auth_request /_validate_apikey;
+
+    # URI routing
+     location /service/paymentapi/ {
+         proxy_pass ${PAYMENTAPI_SERVICE};
+         proxy_set_header Host ${HOST};
+    }
+
+     location /service/loginapi/ {
+         proxy_pass ${LOGINAPI_SERVICE};
+         proxy_set_header Host ${HOST};
+    }
+
+    location /service/catalogapi/ {
+        proxy_pass ${CATALOGAPI_SERVICE};
+        proxy_set_header Host localhost;
+    }
+
+    location /service/emailapi/ {
+        proxy_pass ${EMAILAPI_SERVICE};
+        proxy_set_header Host localhost;
+    }
+    
+    return 404;
+}

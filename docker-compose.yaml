@@ -1,0 +1,76 @@
+version: '3.1'
+
+services:
+  catalogo:
+    container_name: cat
+    image: tsubaki0x01/catalogo:1.0.0
+    ports:
+      - "8001:8001"
+    networks:
+      - services-net
+
+  login:
+    container_name: login_ser
+    image: tsubaki0x01/login:1.0.0
+    ports:
+      - "3002:3002"
+    networks:
+      - services-net
+    depends_on:
+      - web
+    
+
+  web:
+    container_name: web_ser
+    image: tsubaki0x01/web:1.0.0
+    environment:
+      REDIS_HOST: redis-image
+      STRIPE_SECRET_KEY: 'sk_test_51NsZs5FImhX97v5dFA6IswjfcOIcBLWAoTFQDkiflXxnr99P1BwTlec0G0Y3EEkNnqvD3ekR2JzYYUCUPRLBkk4G007wHTMI92'
+    ports:
+      - 6800:6800
+    networks:
+      - services-net
+    depends_on:
+      - redis-image
+
+  redis-image:
+    image: redis
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    volumes:
+      - redis-persistent:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - services-net
+    entrypoint: redis-server --appendonly yes
+    
+  api:
+    container_name: api_ga
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - catalogo
+      - login
+      - web
+    environment:
+      CATALOGAPI_SERVICE: http://catalogo:8001/
+      LOGINAPI_SERVICE: http://login:3002/
+      PAYMENTAPI_SERVICE: http://web:6800/
+      EMAILAPI_SERVICE: http://web:6800/
+      HOST: localhost
+    networks:
+      - services-net
+    command: /bin/bash -c "envsubst < /etc/nginx/api_conf.d/payment_api.conf.template > /etc/nginx/api_conf.d/default.conf && nginx -g 'daemon off;'"
+
+volumes:
+  redis-persistent:
+    driver: local
+
+
+networks:
+  services-net:
+    driver: bridge
